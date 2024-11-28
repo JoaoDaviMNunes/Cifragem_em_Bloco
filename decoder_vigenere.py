@@ -34,9 +34,14 @@ def expandir_palavra_chave(texto, palavra_chave):
 # ====================== FUNÇÕES PRINCIPAIS ======================
 
 # Função para decodificar uma mensagem cifrada usando a Cifra de Vigenère
-def decoder_vigerene(texto_cifrado, palavra_chave):
-    # Inicializa uma variável (como string) para armazenar o texto decifrado
-    texto_decifrado = ""
+def decoder_vigenere(texto_cifrado, palavra_chave):
+    # Verifica se texto_cifrado é do tipo bytes e o decodifica
+    if isinstance(texto_cifrado, bytes):
+        texto_cifrado = texto_cifrado.decode('utf-8')  # Decodifica para string
+
+    # Decodificação de Vigenère (exemplo simplificado)
+    texto_decifrado = []
+    tamanho_chave = len(palavra_chave)
     
     # Expande a palavra-chave para que tenha o mesmo comprimento que o texto cifrado
     palavra_chave_repetida = expandir_palavra_chave(texto_cifrado, palavra_chave)
@@ -45,16 +50,13 @@ def decoder_vigerene(texto_cifrado, palavra_chave):
     for i in range(len(texto_cifrado)):
         # Converte a letra em seu índice ASCII, subtraindo o índice ASCII da palavra-chave para "reverter" a cifra e obter a palavra original
         indice_texto = ord(texto_cifrado[i]) - ord("A")
-        indice_palavra_chave = ord(palavra_chave_repetida[i]) - ord("A")
+        indice_palavra_chave = ord(palavra_chave_repetida[i%tamanho_chave]) - ord("A")
         
         # Decifra o texto cifrado aplicando a subtração e usa o mód 26 (índice entre 0 e 25)
         indice_decifrado = (indice_texto - indice_palavra_chave + 26) % 26
-        letra_decifrada = chr(indice_decifrado + ord("A"))
+        texto_decifrado.append(chr(indice_decifrado + ord("A")))
         
-        # Adiciona a letra decifrada ao texto decifrado
-        texto_decifrado += letra_decifrada
-        
-    return texto_decifrado
+    return "".join(texto_decifrado)
 
 if __name__ ==  "__main__":
     # Limpa a tela para que seja realizada a cifragem e a decifragem da Cifra de Vigenère
@@ -88,7 +90,7 @@ if __name__ ==  "__main__":
     print("Texto Cifrado:\t\t", texto_cifrado)
 
     # Decodifica o texto cifrado usando a função inversa da Cifra de Vigenère
-    texto_decifrado = decoder_vigerene(texto_cifrado, palavra_chave)
+    texto_decifrado = decoder_vigenere(texto_cifrado, palavra_chave)
     print("Texto Decifrado:\t\t", texto_decifrado)
 
     # Salva o texto decifrado no arquivo de saída

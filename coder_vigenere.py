@@ -34,10 +34,16 @@ def expandir_palavra_chave(texto, palavra_chave):
 # ====================== FUNÇÕES PRINCIPAIS ======================
 
 # Função principal que codifica o texto claro usando a Cifra de Vigenère
-def coder_vigerene(texto_claro, palavra_chave):
-    # Inicializa uma variável (como string) para armazenar o texto cifrado
-    texto_cifrado = ""
-    
+def coder_vigenere(texto_claro, palavra_chave):
+
+    # Verifica se texto_claro é do tipo bytes e o decodifica
+    if isinstance(texto_claro, bytes):
+        texto_claro = texto_claro.decode('utf-8')
+
+    # Inicializa uma variável (como string) para armazenar o texto cifrado e o tamanho da chave
+    texto_cifrado = []
+    tamanho_chave = len(palavra_chave)
+
     # Expande a palavra-chave até que ela tenha o mesmo comprimento que o texto
     palavra_chave_repetida = expandir_palavra_chave(texto_claro, palavra_chave)
     
@@ -45,17 +51,14 @@ def coder_vigerene(texto_claro, palavra_chave):
     for i in range(len(texto_claro)):
         # ord(): função do Python que pega o valor ASCII da letra e subtrai o valor ASCII de "A" para obter um índice entre 0 e 25 (26 letras do alfabeto regular)
         indice_texto = ord(texto_claro[i]) - ord("A")
-        indice_palavra_chave = ord(palavra_chave_repetida[i]) - ord("A")
+        indice_palavra_chave = ord(palavra_chave_repetida[i%tamanho_chave]) - ord("A")
         
         # Cifra o texto aplicando o índice da palavra-chave, e usa o mód 26 (índice entre 0 e 25))
         indice_cifrado = (indice_texto + indice_palavra_chave) % 26
         # chr(): função do Python que converte o índice numérico de volta para uma letra maiúscula
-        letra_cifrada = chr(indice_cifrado + ord("A"))
+        texto_cifrado.append(chr(indice_cifrado + ord("A")))
         
-        # Adiciona a letra cifrada ao texto cifrado
-        texto_cifrado += letra_cifrada
-        
-    return texto_cifrado
+    return "".join(texto_cifrado)
 
 if __name__ ==  "__main__":
     # Limpa a tela para que seja realizada a cifragem e a decifragem da Cifra de Vigenère
@@ -85,14 +88,11 @@ if __name__ ==  "__main__":
         palavra_chave = chave_ou_arquivo
     palavra_chave = processar_texto(palavra_chave)
 
-    # Codifica o texto usando a Cifra de Vigenère
-    texto_cifrado = coder_vigerene(texto_claro, palavra_chave)
-
     # Imprime na tela o texto claro
     print("Texto Claro:\t\t", texto_claro)
 
     # Codifica o texto claro usando a função de Cifra de Vigenère
-    texto_cifrado = coder_vigerene(texto_claro, palavra_chave)
+    texto_cifrado = coder_vigenere(texto_claro, palavra_chave)
     print("Texto Cifrado:\t\t", texto_cifrado)
 
     # Salva o texto cifrado no arquivo de saída
