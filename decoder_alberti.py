@@ -1,16 +1,12 @@
 import sys
 
+
 # FUNCAO PARA DECIFRAR TEXTO
 def decifra_texto(text, key):
     try:
-        alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        
-        # Verifica se o conteúdo é bytes e converte para string
-        if isinstance(text, bytes):
-            conteudo_cifrado = text.decode('utf-8')
-        else:
-            conteudo_cifrado = text
-
+        alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'       # ALFABETO ALFANUMÉRICO PARA SUPORTE A CHAVES COM NÚMEROS
+        with open(text, 'r') as arquivo_texto:                  # ABRE O ARQUIVO
+            conteudo_cifrado = arquivo_texto.read().upper()     # COPIA O CONTEUDO DO ARQUIVO DE TEXTO PARA A VARIAVEL CONTEUDO E COLOCA TUDO PARA MAIUSCULO
         key = key.upper()                                       # COLOCA A CHAVE TUDO EM MAIUSCULO
         texto_decifrado = []
         

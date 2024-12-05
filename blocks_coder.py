@@ -7,11 +7,10 @@
 import sys
 import os
 import coder_vigenere
-import coder_alberti
-import coder_ADFGVX
 import decoder_vigenere
+import coder_alberti
 import decoder_alberti
-import decoder_ADFGVX
+import kamasutra
 from unicodedata import normalize
 
 # ====================== FUNÇÕES AUXILIARES ======================
@@ -23,16 +22,27 @@ def processar_texto(texto):
     return texto
 
 def adiciona_padding(texto, tamanho_bloco):
-    pad_len = tamanho_bloco - (len(texto) % tamanho_bloco)
-    return texto + bytes([pad_len] * pad_len)
-
-def remove_padding(texto):
-    tamanho_pad = texto[-1]
-    if all(p == tamanho_pad for p in texto[-tamanho_pad:]):
-        return texto[:-tamanho_pad]
-    raise ValueError("Padding inválido!")
+    pad_tam = tamanho_bloco - (len(texto) % tamanho_bloco)
+    return texto + ('X' * pad_tam)
 
 # ====================== FUNÇÕES PRINCIPAIS ======================
+
+# Função para realizar uma rodada de Feistel
+def feistel_round(bloco, chave, cifra_func):
+    # Definindo as variáveis da rede de Feistel
+    meio = len(bloco) // 2
+    esq = bloco[:meio]
+    dir = bloco[meio:]
+    
+    # Encriptação no lado direito
+    cifra_saida = cifra_func(esq, chave)
+    
+    # Operação XOR entre os resultados
+    novo_dir = ''.join(
+        chr((ord(r) ^ ord(c)) % 256) for r, c in zip(dir, cifra_saida)
+    )
+    
+    return dir + novo_dir
 
 if __name__ == "__main__":
     # Limpa a tela para que seja realizada a cifragem e a decifragem da Cifra de Vigenère
@@ -55,8 +65,10 @@ if __name__ == "__main__":
 
     try:
         # Leitura do texto claro a partir do arquivo de entrada
-        with open(arquivo_entrada, 'rb') as f:
-            texto = f.read()
+        with open(arquivo_entrada, 'r') as f:
+            texto = f.read().strip()
+        texto = processar_texto(texto)
+        print(texto)
 
         # Obtém a chave, seja diretamente ou por um arquivo
         if os.path.isfile(chave_ou_arquivo):
@@ -73,24 +85,22 @@ if __name__ == "__main__":
         texto_claro = adiciona_padding(texto, tamanho_bloco)
 
         # Realiza a separação por blocos
-        blocos = [texto_claro[i:i + tamanho_bloco] for i in range(0, len(texto_claro), tamanho_bloco)]
+        for i in range(0, len(texto_claro), tamanho_bloco):
+            blocos = [texto_claro[i:i + tamanho_bloco]]
 
         # Cria um bloco para a cifragem
         blocos_cifrados = []
 
         # definição e início da operação desejada
         for i, bloco in enumerate(blocos):
-            if i % 3 == 0:
-                texto_cifrado = coder_vigenere.coder_vigenere(bloco.decode('latin1'), palavra_chave)
-            elif i % 3 == 1:
-                texto_cifrado = coder_vigenere.coder_vigenere(bloco.decode('latin1'), palavra_chave)
-            elif i % 3 == 2:
-                texto_cifrado = coder_vigenere.coder_vigenere(bloco.decode('latin1'), palavra_chave)
-            blocos_cifrados.append(texto_cifrado.encode('latin1'))
+            texto_cifrado = feistel_round(bloco, palavra_chave, coder_vigenere.coder_vigenere)
+            texto_cifrado = feistel_round(bloco, palavra_chave, coder_vigenere.coder_vigenere)
+            texto_cifrado = feistel_round(bloco, palavra_chave, coder_vigenere.coder_vigenere)
+            blocos_cifrados.append(texto_cifrado)
 
         # Unindo a lista de blocos e colocando o texto cifrado/decifrado no arquivo de saída
-        with open(arquivo_saida, 'wb') as saida:
-            saida.write(b''.join(blocos_cifrados))
+        with open(arquivo_saida, 'w') as saida:
+            saida.write(''.join(blocos_cifrados))
             print(f"Arquivo de saída \"{arquivo_saida}\" finalizado com sucesso!")
 
     except Exception as e:
