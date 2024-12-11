@@ -1,33 +1,19 @@
-# João Davi
-# Computer Systems Security
-# UFRGS
-
-# ====================== IMPORTS E CONSTANTES ======================
-
 import sys
 import os
-import coder_vigenere
-import coder_alberti
-import coder_ADFGVX
-import decoder_vigenere
-import decoder_alberti
-import decoder_ADFGVX
-from unicodedata import normalize
+import cipher_vigenere
+import cipher_alberti
+import cipher_kamasutra
 
 # ====================== FUNÇÕES AUXILIARES ======================
 
-# Função para retirar os caracteres especiais e os espaços, além de colocar todas letras em maiúsculo
-def processar_texto(texto):
-    texto = normalize("NFKD", texto).encode("ASCII", "ignore").decode("ASCII")
-    texto = "".join(texto.split()).upper()
+# Função para remover padding composto de múltiplos de 'J's
+def remover_padding(texto):
+    """
+    Remove padding composto apenas por 'J's no final do texto.
+    """
+    while texto and texto[-1] == 'J':
+        texto.pop()  # Remove o último elemento se for 'J'
     return texto
-
-# Função para remover padding PKCS#7 do último bloco
-def remove_padding(texto):
-    tamanho_pad = texto[-1]
-    if all(p == tamanho_pad for p in texto[-tamanho_pad:]):
-        return texto[:-tamanho_pad]
-    raise ValueError("Padding inválido!")
 
 # ====================== FUNÇÕES PRINCIPAIS ======================
 
@@ -36,7 +22,7 @@ if __name__ == "__main__":
     os.system("cls" if os.name == "nt" else "clear")
 
     # Verifica se foi passado tudo pela linha de comando ou Terminal
-    if len(sys.argv) < 4:
+    if len(sys.argv) != 4:
         print("Uso errado pelo Terminal! Forma correta do comando:")
         print("python3 blocks_decoder.py <arquivo_entrada_texto_cifrado> <arquivo_saida_texto_decifrado> <chave_ou_arquivo>")
         sys.exit(1)
@@ -51,47 +37,48 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        # Leitura do texto cifrado a partir do arquivo de entrada
-        with open(arquivo_entrada, 'rb') as f:
-            texto_cifrado = f.read()
+        with open(arquivo_entrada, 'r', encoding='utf-8') as f:
+            texto_cifrado = list(f.read().strip())  # Lê o texto e converte para lista de caracteres
 
-        # Obtém a chave, seja diretamente ou por um arquivo
+        # Obtém a chave
         if os.path.isfile(chave_ou_arquivo):
             with open(chave_ou_arquivo, 'r', encoding='utf-8') as f:
-                palavra_chave = f.read().strip()
+                palavra_chave = list(f.read().strip())
         else:
-            palavra_chave = chave_ou_arquivo
-        palavra_chave = processar_texto(palavra_chave)
+            palavra_chave = list(chave_ou_arquivo.strip())
 
         # Definição do tamanho do bloco
-        tamanho_bloco = 16  # 16 bytes = 128 bits
+        tamanho_bloco = 16  # 16 caracteres
 
-        # Divide o texto em blocos
+        # Divide o texto em blocos de listas de caracteres
         blocos = [texto_cifrado[i:i + tamanho_bloco] for i in range(0, len(texto_cifrado), tamanho_bloco)]
+
+        # Lista de funções de decodificação
+        decoder_functions = [
+            lambda bloco, chave: list(cipher_vigenere.decoder_vigenere(''.join(bloco), ''.join(chave))),
+            lambda bloco, chave: list(cipher_alberti.decifra_texto(''.join(bloco), ''.join(chave))),
+            lambda bloco, chave: list(cipher_kamasutra.descriptografar_arquivo(''.join(bloco), ''.join(chave))),
+        ]
 
         # Lista para armazenar os blocos decifrados
         blocos_decifrados = []
 
-        # Processa cada bloco com o decodificador correspondente
+        # Processa cada bloco
         for i, bloco in enumerate(blocos):
-            bloco_str = bloco.decode('latin1')  # Decodifica o bloco de bytes para string
-            if i % 3 == 0:
-                bloco_decifrado = decoder_vigenere.decoder_vigenere(bloco_str, palavra_chave)
-            elif i % 3 == 1:
-                bloco_decifrado = decoder_vigenere.decoder_vigenere(bloco_str, palavra_chave)
-            elif i % 3 == 2:
-                bloco_decifrado = decoder_vigenere.decoder_vigenere(bloco_str, palavra_chave)
-            blocos_decifrados.append(bloco_decifrado.encode('latin1'))  # Recodifica para bytes
+            decode_func = decoder_functions[i % len(decoder_functions)]
+            bloco_decifrado = decode_func(bloco, palavra_chave)  # Retorna uma lista
+            blocos_decifrados.append(bloco_decifrado)
 
         # Remove padding do último bloco
         if blocos_decifrados:
-            blocos_decifrados[-1] = remove_padding(blocos_decifrados[-1])
+            blocos_decifrados[-1] = remover_padding(blocos_decifrados[-1])
 
-        # Unindo a lista de blocos decifrados e escrevendo no arquivo de saída
-        with open(arquivo_saida, 'wb') as saida:
-            saida.write(b''.join(blocos_decifrados))
+        # Unindo os blocos decifrados e escrevendo no arquivo de saída
+        with open(arquivo_saida, 'w', encoding='utf-8') as saida:
+            texto_decifrado = ''.join([''.join(bloco) for bloco in blocos_decifrados])  # Concatena as listas de caracteres
+            saida.write(texto_decifrado)
 
-        print("Arquivo de saída criado com sucesso!")
+        print(f"Arquivo de saída \"{arquivo_saida}\" finalizado com sucesso!")
 
     except Exception as e:
         print(f"Erro: {e}")
