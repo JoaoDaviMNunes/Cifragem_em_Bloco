@@ -6,10 +6,15 @@ import sys
 import os
 from unicodedata import normalize
 
+# ====================== FUNÇÕES AUXILIARES ======================
+
+def ajustar_caso(letra, referencia):
+    return letra.upper() if referencia.isupper() else letra.lower()
+
 # ====================== FUNÇÕES PRINCIPAIS ======================
 
 # Função para cifrar texto usando o método baseado na cifra de Alberti
-def cifra_texto(conteudo, key):
+def cifragem_alberti(conteudo, key):
     alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'  # Alfabeto alfanumérico
     key = key.upper()  # Coloca a chave em maiúsculo
     texto_cifrado = []
@@ -18,26 +23,32 @@ def cifra_texto(conteudo, key):
     chave_expandida = (key * (len(conteudo) // len(key) + 1))[:len(conteudo)]
 
     for i in range(len(conteudo)):
-        if conteudo[i] in alfabeto:
-            pos_texto = alfabeto.find(conteudo[i])
+        if conteudo[i].upper() in alfabeto:
+            pos_texto = alfabeto.find(conteudo[i].upper())
             pos_chave = alfabeto.find(chave_expandida[i])
-            pos_cifrada = (pos_chave - pos_texto) % len(alfabeto)
-            texto_cifrado.append(alfabeto[pos_cifrada])
+            pos_cifrada = (pos_texto + pos_chave) % len(alfabeto)
+            texto_cifrado.append(ajustar_caso(alfabeto[pos_cifrada], conteudo[i]))
         else:
             # Se o caractere não estiver no alfabeto, adicioná-lo sem cifragem
             texto_cifrado.append(conteudo[i])
 
-    return texto_cifrado
+    return ''.join(texto_cifrado)
 
 # FUNCAO PARA DECIFRAR TEXTO
-def decifra_texto(texto, chave):
-    # Exemplo de decodificação com cifra de Alberti
-    texto_decifrado = []  # Lista de caracteres decifrados
+def decifragem_alberti(text, key):
+    alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    key = key.upper()
+    texto_decifrado = []
 
-    for i in range(len(texto)):
-        # Exemplo de decodificação
-        texto_decifrado.append(chr((ord(texto[i]) - ord(chave[i % len(chave)])) % 256))
+    chave_expandida = (key * (len(text) // len(key) + 1))[:len(text)]
 
-    return texto_decifrado
+    for i in range(len(text)):
+        if text[i].upper() in alfabeto:
+            pos_texto = alfabeto.find(text[i].upper())
+            pos_chave = alfabeto.find(chave_expandida[i])
+            pos_decifrada = (pos_texto - pos_chave) % len(alfabeto)
+            texto_decifrado.append(ajustar_caso(alfabeto[pos_decifrada], text[i]))
+        else:
+            texto_decifrado.append(text[i])
 
-
+    return ''.join(texto_decifrado)
