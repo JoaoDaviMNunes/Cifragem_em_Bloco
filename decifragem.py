@@ -7,6 +7,25 @@ import os
 def ajustar_caso(letra, referencia):
     return letra.upper() if referencia.isupper() else letra.lower()
 
+def expandir_palavra_chave(texto, palavra_chave):
+    palavra_chave_expandida = []
+    indice_palavra_chave = 0
+    for char in texto:
+        if char.isalpha():
+            palavra_chave_expandida.append(palavra_chave[indice_palavra_chave])
+            indice_palavra_chave = (indice_palavra_chave + 1) % len(palavra_chave)
+        else:
+            palavra_chave_expandida.append(char)
+    return ''.join(palavra_chave_expandida)
+
+def pad(text, block_size):
+    padding_len = block_size - (len(text) % block_size)
+    return text + chr(padding_len) * padding_len
+
+def unpad(text):
+    padding_len = ord(text[-1])
+    return text[:-padding_len]
+
 # ====================== FUNÇÕES PRINCIPAIS ======================
 
 # Função para cifrar texto usando o método baseado na cifra de Alberti
@@ -16,12 +35,12 @@ def cifragem_alberti(conteudo, key):
     texto_cifrado = []
 
     # Expande a chave para ter o mesmo tamanho do conteúdo
-    chave_expandida = (key * (len(conteudo) // len(key) + 1))[:len(conteudo)]
+    chave_expandida = expandir_palavra_chave(conteudo, key)
 
     for i in range(len(conteudo)):
         if conteudo[i].upper() in alfabeto:
             pos_texto = alfabeto.find(conteudo[i].upper())
-            pos_chave = alfabeto.find(chave_expandida[i])
+            pos_chave = alfabeto.find(chave_expandida[i].upper())
             pos_cifrada = (pos_texto + pos_chave) % len(alfabeto)
             texto_cifrado.append(ajustar_caso(alfabeto[pos_cifrada], conteudo[i]))
         else:
@@ -30,18 +49,18 @@ def cifragem_alberti(conteudo, key):
 
     return ''.join(texto_cifrado)
 
-# FUNCAO PARA DECIFRAR TEXTO
+# Função para decifrar texto usando o método baseado na cifra de Alberti
 def decifragem_alberti(text, key):
     alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     key = key.upper()
     texto_decifrado = []
 
-    chave_expandida = (key * (len(text) // len(key) + 1))[:len(text)]
+    chave_expandida = expandir_palavra_chave(text, key)
 
     for i in range(len(text)):
         if text[i].upper() in alfabeto:
             pos_texto = alfabeto.find(text[i].upper())
-            pos_chave = alfabeto.find(chave_expandida[i])
+            pos_chave = alfabeto.find(chave_expandida[i].upper())
             pos_decifrada = (pos_texto - pos_chave) % len(alfabeto)
             texto_decifrado.append(ajustar_caso(alfabeto[pos_decifrada], text[i]))
         else:
@@ -77,7 +96,6 @@ def kama_cifra(text, key):
     
     return ''.join(texto_criptografado)
 
-
 def kama_decifra(text, key):
     _, tabela_descriptografia = criar_tabela_substituicao()
     texto_descriptografado = []
@@ -89,24 +107,6 @@ def kama_decifra(text, key):
             texto_descriptografado.append(char)
     
     return ''.join(texto_descriptografado)
-
-def ajustar_caso(letra, referencia):
-    return letra.upper() if referencia.isupper() else letra.lower()
-
-def expandir_palavra_chave(texto, palavra_chave):
-    palavra_chave_expandida = []
-    indice_palavra_chave = 0
-    for char in texto:
-        if char.isalpha():
-            palavra_chave_expandida.append(palavra_chave[indice_palavra_chave])
-            indice_palavra_chave = (indice_palavra_chave + 1) % len(palavra_chave)
-        else:
-            palavra_chave_expandida.append(char)
-    return ''.join(palavra_chave_expandida)
-
-def pad(text, block_size):
-    padding_len = block_size - (len(text) % block_size)
-    return text + chr(padding_len) * padding_len
 
 def coder_vigenere(texto_claro, palavra_chave):
     texto_cifrado = []
@@ -127,10 +127,6 @@ def coder_vigenere(texto_claro, palavra_chave):
         indice_palavra_chave += 1
         
     return ''.join(texto_cifrado)
-
-def unpad(text):
-    padding_len = ord(text[-1])
-    return text[:-padding_len]
 
 def decoder_vigenere(texto_cifrado, palavra_chave):
     texto_decifrado = []
