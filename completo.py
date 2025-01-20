@@ -175,7 +175,7 @@ def cifrar_arquivo(entrada, saida, chave_ou_arquivo, rodadas_feistel):
     with open(saida, 'w') as f:
         f.write(''.join(blocos_criptografados))
 
-def decifrar_arquivo(entrada, saida, chave_ou_arquivo):
+def decifrar_arquivo(entrada, saida, chave_ou_arquivo, rodadas_feistel):
     blocos_descriptografados = []
 
     # Abrindo o arquivo texto claro
