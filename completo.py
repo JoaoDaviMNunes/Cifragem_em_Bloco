@@ -1,6 +1,12 @@
-from itertools import cycle
+# João Davi
+# Computer Systems Security
+# UFRGS
+
+# ====================== IMPORTS E CONSTANTES ======================
+
 import sys
 import os
+from itertools import cycle
 
 # ====================== FUNÇÕES AUXILIARES ======================
 
@@ -30,24 +36,7 @@ def cifragem_alberti(conteudo, key):
 
     return ''.join(texto_cifrado)
 
-# FUNCAO PARA DECIFRAR TEXTO
-def decifragem_alberti(text, key):
-    alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    key = key.upper()
-    texto_decifrado = []
-
-    chave_expandida = (key * (len(text) // len(key) + 1))[:len(text)]
-
-    for i in range(len(text)):
-        if text[i].upper() in alfabeto:
-            pos_texto = alfabeto.find(text[i].upper())
-            pos_chave = alfabeto.find(chave_expandida[i])
-            pos_decifrada = (pos_texto - pos_chave) % len(alfabeto)
-            texto_decifrado.append(ajustar_caso(alfabeto[pos_decifrada], text[i]))
-        else:
-            texto_decifrado.append(text[i])
-
-    return ''.join(texto_decifrado)
+# ================================================================
 
 def criar_tabela_substituicao():
     alfabeto = 'abcdefghijklmnopqrstuvwxyz'
@@ -77,21 +66,7 @@ def kama_cifra(text, key):
     
     return ''.join(texto_criptografado)
 
-
-def kama_decifra(text, key):
-    _, tabela_descriptografia = criar_tabela_substituicao()
-    texto_descriptografado = []
-
-    for char in text:
-        if char in tabela_descriptografia:
-            texto_descriptografado.append(tabela_descriptografia[char])
-        else:
-            texto_descriptografado.append(char)
-    
-    return ''.join(texto_descriptografado)
-
-def ajustar_caso(letra, referencia):
-    return letra.upper() if referencia.isupper() else letra.lower()
+# ================================================================
 
 def expandir_palavra_chave(texto, palavra_chave):
     palavra_chave_expandida = []
@@ -103,10 +78,6 @@ def expandir_palavra_chave(texto, palavra_chave):
         else:
             palavra_chave_expandida.append(char)
     return ''.join(palavra_chave_expandida)
-
-def pad(text, block_size):
-    padding_len = block_size - (len(text) % block_size)
-    return text + chr(padding_len) * padding_len
 
 def coder_vigenere(texto_claro, palavra_chave):
     texto_cifrado = []
@@ -128,40 +99,54 @@ def coder_vigenere(texto_claro, palavra_chave):
         
     return ''.join(texto_cifrado)
 
+# ================================================================
+
 def unpad(text):
     padding_len = ord(text[-1])
     return text[:-padding_len]
 
-def decoder_vigenere(texto_cifrado, palavra_chave):
-    texto_decifrado = []
-    palavra_chave_repetida = expandir_palavra_chave(texto_cifrado, palavra_chave)
-    indice_palavra_chave = 0
-    
-    for char in texto_cifrado:
-        if char.isalpha():
-            base = ord('A') if char.isupper() else ord('a')
-            posicao_texto = ord(char) - base
-            posicao_palavra_chave = ord(palavra_chave_repetida[indice_palavra_chave].lower()) - ord("a")
-            
-            indice_decifrado = (posicao_texto - posicao_palavra_chave + 26) % 26
-            letra_decifrada = chr(indice_decifrado + base)
-            texto_decifrado.append(letra_decifrada)
-        else:
-            texto_decifrado.append(char)
-        indice_palavra_chave += 1
-        
-    return ''.join(texto_decifrado)
+def pad(texto, bloco_tam):
+    padding_tam = bloco_tam - (len(texto) % bloco_tam)
+    return texto + chr(padding_tam) * padding_tam
 
-# ==============================================
+def feistel_round_cifragem(palavra_chave, bloco, tam_bloco):
+    # https://en.wikipedia.org/wiki/Feistel_cipher
+    div = int(tam_bloco / 2)
+    esq = bloco[:div]
+    dir = bloco[div:]
+    novo_esq = dir
 
-# Retirando o padding
-def unpad(texto):
-    padding_tam = ord(texto[-1])
-    return texto[:-padding_tam]
+    # Realizando a cifragem do lado direito
+    dir = coder_vigenere(dir, palavra_chave)
+    dir = cifragem_alberti(dir, palavra_chave)
+    dir = kama_cifra(dir, palavra_chave)
 
-# Decriptografando o texto
-def decifra_arquivo(entrada, saida, chave_ou_arquivo):
-    # Abrindo o arquivo texto cifrado
+    # dir = esq XOR cifragem(dir)
+    novo_dir = ''
+    for i in range(div):
+        novo_dir += chr(ord(esq[i]) ^ ord(dir[i]))
+
+    return novo_esq + novo_dir
+
+def feistel_round_decifragem(palavra_chave, bloco, tam_bloco):
+    div = int(tam_bloco / 2)
+    esq = bloco[:div]
+    dir = bloco[div:]
+    novo_dir = esq
+
+    # Realizando a cifragem e XOR
+    esq = coder_vigenere(esq, palavra_chave)
+    esq = cifragem_alberti(esq, palavra_chave)
+    esq = kama_cifra(esq, palavra_chave)
+
+    novo_esq = ''
+    for i in range(div):
+        novo_esq += chr(ord(dir[i]) ^ ord(esq[i]))
+
+    return novo_esq + novo_dir
+
+def cifrar_arquivo(entrada, saida, chave_ou_arquivo):
+    # Abrindo o arquivo texto claro
     with open(entrada, 'r') as f:
         texto = f.read()
 
@@ -172,36 +157,70 @@ def decifra_arquivo(entrada, saida, chave_ou_arquivo):
     else:
         palavra_chave = chave_ou_arquivo
     
-    # Definindo o tamanho do bloco
-    tam_bloco = 16
-    blocos = [texto[i:i+tam_bloco] for i in range(0, len(texto), tam_bloco)]
+    # Definindo o tamanho do bloco e realizando a divisão
+    bloco_tam = 16
+    texto = pad(texto, bloco_tam)
+    blocos = [texto[i:i+bloco_tam] for i in range(0, len(texto), bloco_tam)]
     
-    # Definindo as chaves e as cifras
-    chaves = [palavra_chave, palavra_chave, palavra_chave]
-    cifras = [decoder_vigenere, decifragem_alberti, kama_decifra]
+    # Realizando a cifragem em bloco
+    blocos_criptografados = []
+    rodadas_feistel = 2
+    for bloco in blocos:
+        for _ in range(rodadas_feistel):
+            bloco = feistel_round_cifragem(palavra_chave, bloco, bloco_tam)
+        blocos_criptografados.append(bloco)
+            
     
-    # Realizando a descriptografia em blocos
-    blocos_decifrados = []
-    for i, bloco in enumerate(blocos):
-        cifra = cifras[i % len(cifras)]
-        chave = chaves[i % len(chaves)]
-        blocos_decifrados.append(cifra(bloco, chave))
-    
-    texto_decifrado = unpad(''.join(blocos_decifrados))
-    
+    # Escrevendo no arquivo de saída
     with open(saida, 'w') as f:
-        f.write(texto_decifrado)
+        f.write(''.join(blocos_criptografados))
+
+def decifrar_arquivo(entrada, saida, chave_ou_arquivo):
+    blocos_descriptografados = []
+
+    # Abrindo o arquivo texto claro
+    with open(entrada, 'r') as f:
+        texto = f.read()
+
+    # Obtendo a chave, seja diretamente ou por um arquivo
+    if os.path.isfile(chave_ou_arquivo):
+        with open(chave_ou_arquivo, 'r', encoding='utf-8') as f:
+            palavra_chave = f.read().strip()
+    else:
+        palavra_chave = chave_ou_arquivo
+    
+    # Definindo o tamanho do bloco e realizando a divisão
+    bloco_tam = 16
+    blocos = [texto[i:i+bloco_tam] for i in range(0, len(texto), bloco_tam)]
+    
+    # Realizando a cifragem em bloco
+    blocos_descriptografados = []
+    rodadas_feistel = 2
+    for bloco in blocos:
+        for _ in range(rodadas_feistel):
+            bloco = feistel_round_decifragem(palavra_chave, bloco, bloco_tam)
+        blocos_descriptografados.append(bloco)
+    blocos_descriptografados[-1] = unpad(blocos_descriptografados[-1])
+
+    with open(saida, 'w') as f:
+        f.write(''.join(blocos_descriptografados))
+
 
 if __name__ == "__main__":
-    # Verifica se foi passado tudo pela linha de comando ou Terminal
-    if len(sys.argv) < 4:
+    # Verificando se foi passado tudo pela linha de comando ou Terminal
+    if len(sys.argv) < 5:
         print("Uso errado pelo Terminal! Forma correta do comando:")
-        print("python3 blocks_decoder.py <arquivo_entrada_texto_cifrado> <arquivo_saida_texto_decifrado> <chave_ou_arquivo>")
+        print("python3 coder-vigenere.py <arquivo_entrada_texto_claro> <arquivo_saida_texto_cifrado> <chave_ou_arquivo> <modo>")
         sys.exit(1)
 
-    # Recebendo os argumentos nas variáveis e mandando para a função de descriptografia
+    # Recebendo os argumentos nas variáveis e mandando para a função de criptografia
     entrada = sys.argv[1]
     saida = sys.argv[2]
     chave = sys.argv[3]
-    decifra_arquivo(entrada, saida, chave)
-    print("Decifragem em bloco realizada com sucesso!")
+    modo = sys.argv[4]
+
+    if modo == 'c' or modo == 'cifragem':
+        cifrar_arquivo(entrada, saida, chave)
+    elif modo == 'd' or modo == 'decifragem':
+        decifrar_arquivo(entrada, saida, chave)
+    print("Cifragem em bloco realizada com sucesso!")
