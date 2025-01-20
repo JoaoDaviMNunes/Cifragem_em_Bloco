@@ -7,197 +7,156 @@
 import sys
 import os
 from itertools import cycle
+from math import ceil
 
 # ====================== FUNÇÕES AUXILIARES ======================
 
 def ajustar_caso(letra, referencia):
     return letra.upper() if referencia.isupper() else letra.lower()
 
-def expandir_palavra_chave(texto, palavra_chave):
-    palavra_chave_expandida = []
-    indice_palavra_chave = 0
-    for char in texto:
-        if char.isalpha():
-            palavra_chave_expandida.append(palavra_chave[indice_palavra_chave])
-            indice_palavra_chave = (indice_palavra_chave + 1) % len(palavra_chave)
-        else:
-            palavra_chave_expandida.append(char)
-    return ''.join(palavra_chave_expandida)
+def aplicar_xor(byte1, byte2):
+    return byte1 ^ byte2
 
-def pad(text, block_size):
-    padding_len = block_size - (len(text) % block_size)
-    return text + chr(padding_len) * padding_len
+def pad(data, block_size):
+    padding_length = block_size - (len(data) % block_size)
+    return data + bytes([padding_length] * padding_length)
 
-def unpad(text):
-    padding_len = ord(text[-1])
-    return text[:-padding_len]
+def unpad(data):
+    padding_length = data[-1]
+    return data[:-padding_length]
 
-# ====================== FUNÇÕES PRINCIPAIS ======================
+# ====================== CIFRAGENS ======================
 
-# Função para cifrar texto usando o método baseado na cifra de Alberti
-def cifragem_alberti(conteudo, key):
-    alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'  # Alfabeto alfanumérico
-    key = key.upper()  # Coloca a chave em maiúsculo
+# Cifra de Alberti
+def cifragem_alberti(conteudo, chave):
+    alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    chave = chave.upper()
     texto_cifrado = []
-
-    # Expande a chave para ter o mesmo tamanho do conteúdo
-    chave_expandida = expandir_palavra_chave(conteudo, key)
+    chave_expandida = (chave * (len(conteudo) // len(chave) + 1))[:len(conteudo)]
 
     for i in range(len(conteudo)):
         if conteudo[i].upper() in alfabeto:
             pos_texto = alfabeto.find(conteudo[i].upper())
-            pos_chave = alfabeto.find(chave_expandida[i].upper())
+            pos_chave = alfabeto.find(chave_expandida[i])
             pos_cifrada = (pos_texto + pos_chave) % len(alfabeto)
             texto_cifrado.append(ajustar_caso(alfabeto[pos_cifrada], conteudo[i]))
         else:
-            # Se o caractere não estiver no alfabeto, adicioná-lo sem cifragem
             texto_cifrado.append(conteudo[i])
 
     return ''.join(texto_cifrado)
 
-# Função para decifrar texto usando o método baseado na cifra de Alberti
-def decifragem_alberti(text, key):
-    alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    key = key.upper()
-    texto_decifrado = []
-
-    chave_expandida = expandir_palavra_chave(text, key)
-
-    for i in range(len(text)):
-        if text[i].upper() in alfabeto:
-            pos_texto = alfabeto.find(text[i].upper())
-            pos_chave = alfabeto.find(chave_expandida[i].upper())
-            pos_decifrada = (pos_texto - pos_chave) % len(alfabeto)
-            texto_decifrado.append(ajustar_caso(alfabeto[pos_decifrada], text[i]))
-        else:
-            texto_decifrado.append(text[i])
-
-    return ''.join(texto_decifrado)
-
+# Cifra de Kamasutra
 def criar_tabela_substituicao():
     alfabeto = 'abcdefghijklmnopqrstuvwxyz'
     primeira_metade = alfabeto[:13]
     segunda_metade = alfabeto[13:]
-
     tabela_criptografia = {}
-    tabela_descriptografia = {}
 
     for i in range(len(primeira_metade)):
         tabela_criptografia[primeira_metade[i]] = segunda_metade[i]
         tabela_criptografia[segunda_metade[i]] = primeira_metade[i]
-        tabela_descriptografia[segunda_metade[i]] = primeira_metade[i]
-        tabela_descriptografia[primeira_metade[i]] = segunda_metade[i]
-    
-    return tabela_criptografia, tabela_descriptografia
 
-def kama_cifra(text, key):
-    tabela_criptografia, _ = criar_tabela_substituicao()
+    return tabela_criptografia
+
+def kama_cifra(texto):
+    tabela_criptografia = criar_tabela_substituicao()
     texto_criptografado = []
 
-    for char in text:
+    for char in texto:
         if char in tabela_criptografia:
             texto_criptografado.append(tabela_criptografia[char])
         else:
             texto_criptografado.append(char)
-    
+
     return ''.join(texto_criptografado)
 
-def kama_decifra(text, key):
-    _, tabela_descriptografia = criar_tabela_substituicao()
-    texto_descriptografado = []
+# Cifra de Vigenere
+def expandir_palavra_chave(texto, chave):
+    chave_expandida = []
+    indice = 0
 
-    for char in text:
-        if char in tabela_descriptografia:
-            texto_descriptografado.append(tabela_descriptografia[char])
+    for char in texto:
+        if char.isalpha():
+            chave_expandida.append(chave[indice % len(chave)])
+            indice += 1
         else:
-            texto_descriptografado.append(char)
-    
-    return ''.join(texto_descriptografado)
+            chave_expandida.append(char)
 
-def coder_vigenere(texto_claro, palavra_chave):
+    return ''.join(chave_expandida)
+
+def coder_vigenere(texto, chave):
     texto_cifrado = []
-    palavra_chave_repetida = expandir_palavra_chave(texto_claro, palavra_chave)
-    indice_palavra_chave = 0
-    
-    for char in texto_claro:
+    chave_expandida = expandir_palavra_chave(texto, chave)
+
+    for i, char in enumerate(texto):
         if char.isalpha():
             base = ord('A') if char.isupper() else ord('a')
             posicao_texto = ord(char) - base
-            posicao_palavra_chave = ord(palavra_chave_repetida[indice_palavra_chave].lower()) - ord("a")
-            
-            char_cifrado = (posicao_texto + posicao_palavra_chave) % 26
-            letra_cifrada = chr(char_cifrado + base)
-            texto_cifrado.append(letra_cifrada)
+            posicao_chave = ord(chave_expandida[i].lower()) - ord('a')
+            char_cifrado = (posicao_texto + posicao_chave) % 26
+            texto_cifrado.append(chr(char_cifrado + base))
         else:
             texto_cifrado.append(char)
-        indice_palavra_chave += 1
-        
+
     return ''.join(texto_cifrado)
 
-def decoder_vigenere(texto_cifrado, palavra_chave):
-    texto_decifrado = []
-    palavra_chave_repetida = expandir_palavra_chave(texto_cifrado, palavra_chave)
-    indice_palavra_chave = 0
-    
-    for char in texto_cifrado:
-        if char.isalpha():
-            base = ord('A') if char.isupper() else ord('a')
-            posicao_texto = ord(char) - base
-            posicao_palavra_chave = ord(palavra_chave_repetida[indice_palavra_chave].lower()) - ord("a")
-            
-            indice_decifrado = (posicao_texto - posicao_palavra_chave + 26) % 26
-            letra_decifrada = chr(indice_decifrado + base)
-            texto_decifrado.append(letra_decifrada)
-        else:
-            texto_decifrado.append(char)
-        indice_palavra_chave += 1
-        
-    return ''.join(texto_decifrado)
+# Cifra XOR
+def cifragem_xor(bloco, chave):
+    return bytes([aplicar_xor(bloco[i], chave[i % len(chave)]) for i in range(len(bloco))])
 
-# ====================================
+# Rodadas de Feistel
+def rodadas_feistel(bloco, chave):
+    metade = len(bloco) // 2
+    esquerda = bloco[:metade]
+    direita = bloco[metade:]
+
+    for _ in range(2):
+        nova_direita = bytes([aplicar_xor(e, k) for e, k in zip(esquerda, direita)])
+        esquerda, direita = direita, nova_direita
+
+    return esquerda + direita
+
+# ====================== PROCESSAMENTO ======================
 
 def cifrar_arquivo(entrada, saida, chave_ou_arquivo):
-    # Abrindo o arquivo texto claro
-    with open(entrada, 'r') as f:
+    with open(entrada, 'rb') as f:
         texto = f.read()
 
-    # Obtendo a chave, seja diretamente ou por um arquivo
     if os.path.isfile(chave_ou_arquivo):
         with open(chave_ou_arquivo, 'r', encoding='utf-8') as f:
             palavra_chave = f.read().strip()
     else:
         palavra_chave = chave_ou_arquivo
-    
-    # Definindo o tamanho do bloco
+
     bloco_tam = 16
     texto = pad(texto, bloco_tam)
-    blocos = [texto[i:i+bloco_tam] for i in range(0, len(texto), bloco_tam)]
-    
-    # Definindo as palavras-chaves e as cifras a serem utilizadas
-    chaves = [palavra_chave, palavra_chave, palavra_chave]
-    cifras = [coder_vigenere, cifragem_alberti, kama_cifra]
-    
-    # Realizando a cifragem em bloco
-    blocos_criptografados = []
-    for i, bloco in enumerate(blocos):
-        cifra = cifras[i % len(cifras)]
-        chave = chaves[i % len(chaves)]
-        blocos_criptografados.append(cifra(bloco, chave))
-    
-    # Escrevendo no arquivo de saída
-    with open(saida, 'w') as f:
-        f.write(''.join(blocos_criptografados))
+    blocos = [texto[i:i + bloco_tam] for i in range(0, len(texto), bloco_tam)]
 
+    chaves = [palavra_chave.encode()] * len(blocos)
+    blocos_cifrados = []
+
+    for i, bloco in enumerate(blocos):
+        bloco = coder_vigenere(bloco.decode(errors='ignore'), palavra_chave).encode()
+        bloco = cifragem_xor(bloco, chaves[i])
+        bloco = cifragem_alberti(bloco.decode(errors='ignore'), palavra_chave).encode()
+        bloco = cifragem_xor(bloco, chaves[i])
+        bloco = kama_cifra(bloco.decode(errors='ignore')).encode()
+        bloco = rodadas_feistel(bloco, chaves[i])
+
+        blocos_cifrados.append(bloco)
+
+    with open(saida, 'wb') as f:
+        f.write(b''.join(blocos_cifrados))
+
+# ===================== EXECUÇÃO =====================
 if __name__ == "__main__":
-    # Verifica se foi passado tudo pela linha de comando ou Terminal
     if len(sys.argv) < 4:
-        print("Uso errado pelo Terminal! Forma correta do comando:")
-        print("python3 blocks_decoder.py <arquivo_entrada_texto_cifrado> <arquivo_saida_texto_decifrado> <chave_ou_arquivo>")
+        print("Uso incorreto! Formato:")
+        print("python3 cifragem.py <entrada> <saída> <chave ou arquivo de chave>")
         sys.exit(1)
 
-    # Recebendo os argumentos nas variáveis e mandando para a função de descriptografia
     entrada = sys.argv[1]
     saida = sys.argv[2]
     chave = sys.argv[3]
     cifrar_arquivo(entrada, saida, chave)
-    print("Cifragem em bloco realizada com sucesso!")
+    print("Cifragem realizada com sucesso!")
