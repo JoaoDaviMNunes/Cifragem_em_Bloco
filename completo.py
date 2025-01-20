@@ -129,6 +129,7 @@ def feistel_round_cifragem(palavra_chave, bloco, tam_bloco):
     return novo_esq + novo_dir
 
 def feistel_round_decifragem(palavra_chave, bloco, tam_bloco):
+    # https://en.wikipedia.org/wiki/Feistel_cipher
     div = int(tam_bloco / 2)
     esq = bloco[:div]
     dir = bloco[div:]
@@ -145,7 +146,7 @@ def feistel_round_decifragem(palavra_chave, bloco, tam_bloco):
 
     return novo_esq + novo_dir
 
-def cifrar_arquivo(entrada, saida, chave_ou_arquivo):
+def cifrar_arquivo(entrada, saida, chave_ou_arquivo, rodadas_feistel):
     # Abrindo o arquivo texto claro
     with open(entrada, 'r') as f:
         texto = f.read()
@@ -164,7 +165,6 @@ def cifrar_arquivo(entrada, saida, chave_ou_arquivo):
     
     # Realizando a cifragem em bloco
     blocos_criptografados = []
-    rodadas_feistel = 2
     for bloco in blocos:
         for _ in range(rodadas_feistel):
             bloco = feistel_round_cifragem(palavra_chave, bloco, bloco_tam)
@@ -195,7 +195,6 @@ def decifrar_arquivo(entrada, saida, chave_ou_arquivo):
     
     # Realizando a cifragem em bloco
     blocos_descriptografados = []
-    rodadas_feistel = 2
     for bloco in blocos:
         for _ in range(rodadas_feistel):
             bloco = feistel_round_decifragem(palavra_chave, bloco, bloco_tam)
@@ -219,8 +218,10 @@ if __name__ == "__main__":
     chave = sys.argv[3]
     modo = sys.argv[4]
 
+    rodadas_feistel = 2
+
     if modo == 'c' or modo == 'cifragem':
-        cifrar_arquivo(entrada, saida, chave)
+        cifrar_arquivo(entrada, saida, chave, rodadas_feistel)
     elif modo == 'd' or modo == 'decifragem':
-        decifrar_arquivo(entrada, saida, chave)
+        decifrar_arquivo(entrada, saida, chave, rodadas_feistel)
     print("Cifragem em bloco realizada com sucesso!")
